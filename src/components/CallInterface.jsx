@@ -88,19 +88,38 @@ const CallInterface = () => {
     }, [isSpeaking, isListening, isLoading, callState, startListening]);
 
 
+    // Sound Refs
+    const ringAudioRef = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3')); // Phone Ring
+    const hangupAudioRef = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/790/790-preview.mp3')); // End Call
+
     // Handlers
     const handleStartCall = () => {
         setCallState('connecting');
+
+        // Start Ringing
+        ringAudioRef.current.loop = true;
+        ringAudioRef.current.play().catch(e => console.log('Audio play failed', e));
+
         setTimeout(() => {
+            // Stop Ringing & Connect
+            ringAudioRef.current.pause();
+            ringAudioRef.current.currentTime = 0;
             setCallState('active');
-        }, 1500); // Fake connection delay
+        }, 3000); // 3s ringing simulation
     };
 
     const handleEndCall = () => {
         setCallState('ended');
+
+        // Stop any ringing if ending early
+        ringAudioRef.current.pause();
+
+        // Play Hangup
+        hangupAudioRef.current.play().catch(e => console.log('Audio play failed', e));
+
         setTimeout(() => {
             navigate('/');
-        }, 2000);
+        }, 1500);
     };
 
     // Render Components
