@@ -59,6 +59,11 @@ const LandingPage = () => {
                                             title="Medication Tracker"
                                             onClick={() => navigate('/meds')}
                                         />
+                                        <MenuItem
+                                            icon={<Heart className="w-4 h-4 text-red-500" />}
+                                            title="First Aid Guide"
+                                            onClick={() => navigate('/first-aid')}
+                                        />
 
                                         <div className="h-px bg-white/10 my-1" />
 

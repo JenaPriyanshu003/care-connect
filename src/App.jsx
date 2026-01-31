@@ -8,6 +8,7 @@ import VisionUpload from './components/VisionUpload';
 import EmergencyFinder from './components/EmergencyFinder';
 
 import MedicationTracker from './components/MedicationTracker';
+import FirstAidGuide from './components/FirstAidGuide';
 import HowItWorks from './components/HowItWorks';
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
                     <Route path="/emergency" element={<EmergencyFinder />} />
 
                     <Route path="/meds" element={<MedicationTracker />} />
+                    <Route path="/first-aid" element={<FirstAidGuide />} />
                 </Routes>
                 <Toaster position="bottom-center" />
             </div>
