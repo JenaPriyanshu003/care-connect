@@ -62,7 +62,6 @@ const LandingPage = () => {
                                 </div>
                                 Call AI Doctor
                             </button>
-                            </button>
                         </div>
 
                         <p className="mt-8 text-sm text-gray-500 flex items-center justify-center gap-2">
