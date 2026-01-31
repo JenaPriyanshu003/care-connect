@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import LandingPage from './components/LandingPage';
 import ChatInterface from './components/ChatInterface';
+import CallInterface from './components/CallInterface';
 import VisionUpload from './components/VisionUpload';
 import EmergencyFinder from './components/EmergencyFinder';
 import TravelCards from './components/TravelCards';
@@ -15,6 +16,7 @@ function App() {
                 <Routes>
                     <Route path="/" element={<LandingPage />} />
                     <Route path="/chat" element={<ChatInterface />} />
+                    <Route path="/call" element={<CallInterface />} />
                     <Route path="/vision" element={<VisionUpload />} />
                     <Route path="/emergency" element={<EmergencyFinder />} />
                     <Route path="/cards" element={<TravelCards />} />
