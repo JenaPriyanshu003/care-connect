@@ -49,9 +49,9 @@ export const useAI = () => {
                     },
                     body: JSON.stringify({
                         messages: groqMessages,
-                        model: "llama3-70b-8192", // Standard stable model
+                        model: "llama-3.3-70b-versatile", // Updated to latest stable
                         temperature: 0.6,
-                        max_tokens: 1024, // Increased from 500
+                        max_tokens: 1024,
                     })
                 });
 
