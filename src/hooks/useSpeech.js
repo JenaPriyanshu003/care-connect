@@ -65,37 +65,11 @@ export const useSpeech = () => {
         };
     }, []);
 
-    const speak = useCallback(async (text, selectedVoiceName = null, pitch = 1.1, rate = 0.95) => {
+    const speak = useCallback((text, selectedVoiceName = null, pitch = 1.1, rate = 0.95) => {
         // Stop any current audio
         window.speechSynthesis.cancel();
 
-        // 1. Try Microsoft Edge TTS (via our API)
-        try {
-            const response = await fetch('/api/tts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    text: text,
-                    voice: 'en-US-JennyNeural' // Microsoft's best female voice
-                })
-            });
-
-            if (response.ok) {
-                const blob = await response.blob();
-                const audio = new Audio(URL.createObjectURL(blob));
-                setIsSpeaking(true);
-                audio.onended = () => setIsSpeaking(false);
-                audio.onerror = () => setIsSpeaking(false);
-                audio.play();
-                return; // EXIT: Success with Edge TTS
-            } else {
-                console.warn("Edge TTS Error:", await response.text());
-            }
-        } catch (err) {
-            console.warn("Edge TTS Failed, falling back to browser:", err);
-        }
-
-        // 2. Fallback: Browser Web Speech API
+        // Browser Web Speech API (Free & Universal)
         if (!('speechSynthesis' in window)) return;
 
         const utterance = new SpeechSynthesisUtterance(text);
@@ -109,17 +83,20 @@ export const useSpeech = () => {
 
         if (!preferredVoice) {
             // Priority Cascade for "Dr. Care" Female Voice
+            // Chrome on Mac/Windows has great Google voices
             preferredVoice =
-                availableVoices.find(v => v.name === "Google US English") || // Best Chrome Voice
-                availableVoices.find(v => v.name === "Samantha") || // Best Mac Voice
-                availableVoices.find(v => v.name === "Microsoft Zira Desktop - English (United States)") || // Windows
+                availableVoices.find(v => v.name === "Google US English") || // Chrome Best
+                availableVoices.find(v => v.name === "Samantha") || // Mac Native
+                availableVoices.find(v => v.name.includes("Microsoft Zira")) || // Windows
                 availableVoices.find(v => v.name === "Google UK English Female") ||
-                availableVoices.find(v => v.name.includes("Female")) ||
-                availableVoices.find(v => v.lang === "en-US"); // Fallback
+                availableVoices.find(v => v.name.toLowerCase().includes("female")) ||
+                availableVoices.find(v => v.lang === "en-US" && v.name.includes("Google")) ||
+                availableVoices.find(v => v.lang.startsWith("en")); // Any English
         }
 
         if (preferredVoice) {
             utterance.voice = preferredVoice;
+            console.log("Using Voice:", preferredVoice.name);
         }
 
         utterance.onstart = () => setIsSpeaking(true);
@@ -127,7 +104,7 @@ export const useSpeech = () => {
         utterance.onerror = (e) => {
             console.error("Speech Error:", e);
             setIsSpeaking(false);
-        }
+        };
 
         // Tuning for "Caring Doctor" Persona
         utterance.pitch = pitch;
