@@ -33,7 +33,7 @@ const VisionUpload = () => {
         setLoading(true);
         try {
             const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" }); // Use flash for vision
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Use stable flash for vision
 
             // Convert base64 to parts
             const base64Data = preview.split(',')[1];

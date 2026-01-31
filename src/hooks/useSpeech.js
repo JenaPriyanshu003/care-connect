@@ -40,25 +40,24 @@ export const useSpeech = () => {
 
         const utterance = new SpeechSynthesisUtterance(text);
 
-        // Select a voice that mimics the professional "Nova" or "Ava" style
+        // Priority: Google US English (Standard, clear), then Samantha, then Zira
         const voices = window.speechSynthesis.getVoices();
-        const preferredVoice = voices.find(voice =>
-            voice.name.includes("Google US English") ||
-            voice.name.includes("Samantha") ||
-            voice.name.includes("Microsoft Zira") ||
-            voice.name.includes("Female")
-        );
+        const preferredVoice =
+            voices.find(v => v.name === "Google US English") ||
+            voices.find(v => v.name === "Samantha") ||
+            voices.find(v => v.name === "Microsoft Zira Desktop");
 
         if (preferredVoice) {
             utterance.voice = preferredVoice;
+            console.log("Using Voice:", preferredVoice.name);
         }
 
         utterance.onstart = () => setIsSpeaking(true);
         utterance.onend = () => setIsSpeaking(false);
-        // Speed: 1.1 is professional and efficient but not rushed (smooth)
-        utterance.rate = 1.1;
-        // Pitch: 0.95 gives a slightly deeper, warmer, and more authoritative "doctor" tone
-        utterance.pitch = 0.95;
+
+        // Gentle, clear, professional pace
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
 
         window.speechSynthesis.speak(utterance);
     }, []);
