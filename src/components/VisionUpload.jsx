@@ -47,10 +47,19 @@ const VisionUpload = () => {
 
             const prompt = `You are a high-level Medical AI Consultant.
             
-            STEP 1: VALIDATION
-            Analyze the image. Use your best judgment to identify ANY possible medical relevance (e.g., skin conditions, medicines, wounds, medical reports, anatomy, or even general health concerns).
-            Only return "INVALID_IMAGE" if the image is COMPLETELY unrelated (e.g., a car, a landscape, a meme, a video game).
-            If you are unsure, proceed with the analysis.
+            STEP 1: STRICT VALIDATION
+            Analyze the image. Determine if this is a valid medical image.
+            
+            Valid images are ONLY:
+            1. Photos of physical symptoms (e.g., rashes, wounds, swelling, eyes, throat).
+            2. Medical documents (e.g., prescriptions, lab reports, X-rays).
+            3. Medical equipment or medicine packaging.
+
+            If the image is ANYTHING else (e.g., a person sitting casually, a selfie without visible symptoms, a landscape, an object, a pet, or a general scene), you MUST return EXACTLY and ONLY the string: "INVALID_IMAGE".
+            Do not provide any other text if it is invalid.
+
+            STEP 2: PROFESSIONAL ANALYSIS
+            If the image is valid, proceed with the analysis.
 
             STEP 2: PROFESSIONAL ANALYSIS
             Provide a structured clinical report using markdown.
@@ -76,7 +85,7 @@ const VisionUpload = () => {
             const text = response.text();
 
             if (text.includes("INVALID_IMAGE")) {
-                setError("This does not appear to be a medical image. Please upload a clear photo of a symptom or medical document.");
+                setError("This does not appear to be a medical image. Please upload a clear photo of a symptom, prescription, or medical report.");
             } else {
                 setAnalysis(text);
             }
