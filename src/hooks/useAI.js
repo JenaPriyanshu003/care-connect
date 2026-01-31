@@ -55,7 +55,7 @@ export const useAI = () => {
             } else {
                 // Fallback to Gemini
                 const genAI = new GoogleGenerativeAI(API_KEY);
-                const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-8b" });
 
                 const historyForApi = messages
                     .filter((_, index) => index > 0 || messages[0].role !== 'assistant')
