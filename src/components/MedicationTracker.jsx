@@ -9,33 +9,70 @@ const MedicationTracker = () => {
     const [showForm, setShowForm] = useState(false);
     const [newMed, setNewMed] = useState({ name: '', time: '' });
 
-    // Load from local storage
+    // Load from MongoDB
     useEffect(() => {
-        const saved = localStorage.getItem('travel_meds');
-        if (saved) setMeds(JSON.parse(saved));
+        fetchMeds();
     }, []);
 
-    const saveMeds = (updatedMeds) => {
-        setMeds(updatedMeds);
-        localStorage.setItem('travel_meds', JSON.stringify(updatedMeds));
+    const fetchMeds = async () => {
+        try {
+            const res = await fetch('/api/medications');
+            if (res.ok) {
+                const data = await res.json();
+                setMeds(data.map(m => ({ ...m, id: m._id }))); // Map _id to id for UI consistency
+            }
+        } catch (error) {
+            console.error("Failed to fetch meds", error);
+        }
     };
 
-    const addMed = () => {
+    const addMed = async () => {
         if (!newMed.name || !newMed.time) return;
-        const updated = [...meds, { ...newMed, id: Date.now(), taken: false }];
-        saveMeds(updated);
-        setNewMed({ name: '', time: '' });
-        setShowForm(false);
+
+        try {
+            const res = await fetch('/api/medications', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...newMed, taken: false })
+            });
+
+            if (res.ok) {
+                await fetchMeds(); // Refresh list
+                setNewMed({ name: '', time: '' });
+                setShowForm(false);
+            }
+        } catch (error) {
+            console.error("Failed to add med", error);
+        }
     };
 
-    const toggleTaken = (id) => {
-        const updated = meds.map(m => m.id === id ? { ...m, taken: !m.taken } : m);
-        saveMeds(updated);
+    const toggleTaken = async (id) => {
+        const med = meds.find(m => m.id === id);
+        if (!med) return;
+
+        try {
+            const res = await fetch(`/api/medications?id=${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ taken: !med.taken })
+            });
+
+            if (res.ok) fetchMeds();
+        } catch (error) {
+            console.error("Failed to toggle med", error);
+        }
     };
 
-    const deleteMed = (id) => {
-        const updated = meds.filter(m => m.id !== id);
-        saveMeds(updated);
+    const deleteMed = async (id) => {
+        try {
+            const res = await fetch(`/api/medications?id=${id}`, {
+                method: 'DELETE',
+            });
+
+            if (res.ok) fetchMeds();
+        } catch (error) {
+            console.error("Failed to delete med", error);
+        }
     };
 
     return (
@@ -73,8 +110,8 @@ const MedicationTracker = () => {
                                     <button
                                         onClick={() => toggleTaken(med.id)}
                                         className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all ${med.taken
-                                                ? 'bg-green-500 border-green-500 text-white'
-                                                : 'border-gray-300 text-transparent hover:border-green-500'
+                                            ? 'bg-green-500 border-green-500 text-white'
+                                            : 'border-gray-300 text-transparent hover:border-green-500'
                                             }`}
                                     >
                                         <CheckCircle className="w-5 h-5" />
