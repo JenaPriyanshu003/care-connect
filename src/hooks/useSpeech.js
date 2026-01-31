@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 
 export const useSpeech = () => {
@@ -32,20 +33,64 @@ export const useSpeech = () => {
         recognition.start();
     }, [supported]);
 
-    const speak = useCallback((text) => {
+    const [voices, setVoices] = useState([]);
+
+    useEffect(() => {
+        const updateVoices = () => {
+            const output = window.speechSynthesis.getVoices();
+            console.log("Detailed Voices Check:", output.length > 0 ? output.length + " voices found" : "No voices yet");
+            if (output.length > 0) {
+                setVoices(output);
+            }
+        };
+
+        // Browsers load voices asynchronously
+        window.speechSynthesis.onvoiceschanged = updateVoices;
+
+        // Initial check
+        updateVoices();
+
+        // Polling fallback
+        const interval = setInterval(() => {
+            const voices = window.speechSynthesis.getVoices();
+            if (voices.length > 0) {
+                setVoices(voices);
+                clearInterval(interval);
+            }
+        }, 500);
+
+        return () => {
+            window.speechSynthesis.onvoiceschanged = null;
+            clearInterval(interval);
+        };
+    }, []);
+
+    const speak = useCallback((text, selectedVoiceName = null, pitch = 1.3, rate = 1.0) => {
         if (!('speechSynthesis' in window)) return;
 
         // Cancel existing speech
         window.speechSynthesis.cancel();
 
         const utterance = new SpeechSynthesisUtterance(text);
+        const availableVoices = window.speechSynthesis.getVoices();
 
-        // Priority: Google US English (Standard, clear), then Samantha, then Zira
-        const voices = window.speechSynthesis.getVoices();
-        const preferredVoice =
-            voices.find(v => v.name === "Google US English") ||
-            voices.find(v => v.name === "Samantha") ||
-            voices.find(v => v.name === "Microsoft Zira Desktop");
+        let preferredVoice;
+
+        if (selectedVoiceName) {
+            preferredVoice = availableVoices.find(v => v.name === selectedVoiceName);
+        }
+
+        if (!preferredVoice) {
+            // Priority 1: Google US English (Female sounding)
+            // Priority 2: Microsoft Zira (Female)
+            // Priority 3: Samantha (Mac Female)
+            // Priority 4: Any voice with "Female" in the name
+            preferredVoice =
+                availableVoices.find(v => v.name === "Google US English") ||
+                availableVoices.find(v => v.name === "Microsoft Zira Desktop") ||
+                availableVoices.find(v => v.name === "Samantha") ||
+                availableVoices.find(v => v.name.includes("Female"));
+        }
 
         if (preferredVoice) {
             utterance.voice = preferredVoice;
@@ -55,9 +100,9 @@ export const useSpeech = () => {
         utterance.onstart = () => setIsSpeaking(true);
         utterance.onend = () => setIsSpeaking(false);
 
-        // Gentle, clear, professional pace
-        utterance.rate = 1.0;
-        utterance.pitch = 1.0;
+        // Apply pitch and rate
+        utterance.pitch = pitch;
+        utterance.rate = rate;
 
         window.speechSynthesis.speak(utterance);
     }, []);
@@ -69,6 +114,7 @@ export const useSpeech = () => {
         startListening,
         isSpeaking,
         speak,
-        supported
+        supported,
+        voices
     };
 };

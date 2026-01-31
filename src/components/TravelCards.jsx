@@ -1,8 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Globe, Volume2, Type, Loader2, AlertTriangle, Save, Trash2, Maximize2, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, Globe, Volume2, Type, Loader2, AlertTriangle, Heart, Stethoscope, Pill, Ambulance, X, Maximize2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { motion, AnimatePresence } from 'framer-motion';
+
+
+
+const CATEGORIES = [
+    { id: 'medical', label: 'Medical', icon: <Stethoscope className="w-4 h-4" />, phrases: ["I have diabetes", "I need a doctor", "Where is the hospital?", "I feel dizzy"] },
+    { id: 'allergies', label: 'Allergies', icon: <AlertTriangle className="w-4 h-4" />, phrases: ["I am allergic to peanuts", "I am allergic to penicillin", "Does this contain gluten?", "I have a seafood allergy"] },
+    { id: 'pharmacy', label: 'Pharmacy', icon: <Pill className="w-4 h-4" />, phrases: ["I need painkillers", "Do you have this medicine?", "I need insulin", "Where is the nearest pharmacy?"] },
+    { id: 'emergency', label: 'Emergency', icon: <Ambulance className="w-4 h-4" />, phrases: ["Call an ambulance!", "Help me!", "It is an emergency", "I've been in an accident"] },
+];
+
+const LANGUAGES = ['Spanish', 'French', 'German', 'Italian', 'Japanese', 'Chinese (Mandarin)', 'Arabic', 'Thai', 'Vietnamese', 'Portuguese', 'Hindi', 'Russian', 'Korean'];
 
 const TravelCards = () => {
     const navigate = useNavigate();
@@ -11,300 +22,242 @@ const TravelCards = () => {
     const [cardData, setCardData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [savedCards, setSavedCards] = useState([]);
-    const [showFullscreen, setShowFullscreen] = useState(false);
+    const [activeCategory, setActiveCategory] = useState('medical');
+    const [showFullScreen, setShowFullScreen] = useState(false);
 
-    // BCP 47 tags for better TTS
-    const LANGUAGES = [
-        { name: 'Spanish', code: 'es-ES' },
-        { name: 'French', code: 'fr-FR' },
-        { name: 'German', code: 'de-DE' },
-        { name: 'Italian', code: 'it-IT' },
-        { name: 'Japanese', code: 'ja-JP' },
-        { name: 'Chinese (Mandarin)', code: 'zh-CN' },
-        { name: 'Arabic', code: 'ar-SA' },
-        { name: 'Thai', code: 'th-TH' },
-        { name: 'Vietnamese', code: 'vi-VN' },
-        { name: 'Portuguese', code: 'pt-PT' },
-        { name: 'Hindi', code: 'hi-IN' }
-    ];
+    const generateCard = async (textToTranslate = inputText) => {
+        if (!textToTranslate.trim()) return;
 
-    const QUICK_PHRASES = [
-        "I have a severe nut allergy.",
-        "Where is the nearest hospital?",
-        "I need a doctor who speaks English.",
-        "I have diabetes and need insulin.",
-        "Please call an ambulance.",
-        "I lost my passport."
-    ];
-
-    useEffect(() => {
-        try {
-            const saved = localStorage.getItem('care_connect_cards');
-            if (saved) {
-                setSavedCards(JSON.parse(saved));
-            }
-        } catch (error) {
-            console.error("Failed to load saved cards:", error);
-            localStorage.removeItem('care_connect_cards'); // Clear bad data
-        }
-    }, []);
-
-    const saveCard = (card) => {
-        const newCards = [card, ...savedCards.filter(c => c.translated !== card.translated)].slice(0, 10);
-        setSavedCards(newCards);
-        localStorage.setItem('care_connect_cards', JSON.stringify(newCards));
-    };
-
-    const deleteCard = (index, e) => {
-        e.stopPropagation();
-        const newCards = savedCards.filter((_, i) => i !== index);
-        setSavedCards(newCards);
-        localStorage.setItem('care_connect_cards', JSON.stringify(newCards));
-    };
-
-    const generateCard = async () => {
-        if (!inputText.trim()) return;
-
-        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyBX0zOG_JGmS7nsmbLqBk4LqYbNaqsWiDo";
         if (!apiKey) {
-            setError('API Key missing. Please check your .env file.');
+            setError('API Key configuration error.');
             return;
         }
 
         setLoading(true);
         setError('');
+        // If clicking a chip, update input to match
+        setInputText(textToTranslate);
 
         try {
             const genAI = new GoogleGenerativeAI(apiKey);
             const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-            const prompt = `Translate the following medical/emergency phrase into ${targetLang}. Return ONLY the translated text, nothing else. Phrase: "${inputText}"`;
+            const prompt = `Translate this medical/travel phrase into ${targetLang}. 
+            Return a JSON object with this structure (no markdown):
+            {
+                "translated": "The translated text in local script",
+                "phonetic": "How to pronounce it in English characters (transliteration)"
+            }
+            Phrase: "${textToTranslate}"`;
 
             const result = await model.generateContent(prompt);
             const response = await result.response;
-            const translation = response.text();
+            const text = response.text();
 
-            const newCard = {
-                original: inputText,
-                translated: translation,
-                language: targetLang,
-                langCode: LANGUAGES.find(l => l.name === targetLang)?.code || 'en-US',
-                timestamp: Date.now()
-            };
+            // Cleanup json formatting if AI adds it
+            const jsonText = text.replace(/```json|```/g, '').trim();
+            const data = JSON.parse(jsonText);
 
-            setCardData(newCard);
-            saveCard(newCard);
+            setCardData({
+                original: textToTranslate,
+                translated: data.translated,
+                phonetic: data.phonetic,
+                language: targetLang
+            });
         } catch (err) {
             console.error(err);
-            setError(`Translation failed: ${err.message || 'Check API key/connection'}`);
+            setError('Translation failed. Please check your connection.');
         } finally {
             setLoading(false);
         }
     };
 
-    const speak = (text, langCode) => {
-        window.speechSynthesis.cancel();
+    const speak = (text) => {
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = langCode;
-        utterance.rate = 0.9; // Slightly slower for clarity
         window.speechSynthesis.speak(utterance);
     };
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
             {/* Header */}
-            <header className="bg-white/80 backdrop-blur-md sticky top-0 z-10 px-4 py-3 border-b flex items-center justify-between shadow-sm">
-                <button onClick={() => navigate('/')} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                    <ArrowLeft className="text-gray-600" />
+            <header className="bg-white/80 backdrop-blur-md px-6 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 z-10">
+                <button onClick={() => navigate('/')} className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
+                    <ArrowLeft className="text-gray-600 w-6 h-6" />
                 </button>
-                <h1 className="font-bold text-gray-800 text-lg flex items-center gap-2">
-                    <Globe className="w-5 h-5 text-green-600" />
-                    Travel Mode
-                </h1>
+                <h1 className="font-bold text-xl text-gray-900 tracking-tight">Travel Cards</h1>
                 <div className="w-8" />
             </header>
 
-            <main className="flex-grow p-4 max-w-2xl mx-auto w-full flex flex-col gap-6">
+            <main className="flex-grow p-4 md:p-6 max-w-2xl mx-auto w-full flex flex-col gap-6">
 
-                {/* Main Input Card */}
-                <div className="bg-white p-6 rounded-3xl shadow-lg shadow-gray-100 border border-gray-100">
-                    <label className="block text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                        <Type className="w-4 h-4 text-green-600" />
-                        Enter Medical Condition or Need
-                    </label>
+                {/* Category Selector */}
+                <div className="flex gap-2 overflow-x-auto pb-2 noscroll-bar">
+                    {CATEGORIES.map(cat => (
+                        <button
+                            key={cat.id}
+                            onClick={() => setActiveCategory(cat.id)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all
+                                ${activeCategory === cat.id
+                                    ? 'bg-gray-900 text-white shadow-lg shadow-gray-200 scale-105'
+                                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+                        >
+                            {cat.icon}
+                            {cat.label}
+                        </button>
+                    ))}
+                </div>
 
+                {/* Quick Chips */}
+                <div className="flex flex-wrap gap-2">
+                    {CATEGORIES.find(c => c.id === activeCategory)?.phrases.map((phrase, idx) => (
+                        <button
+                            key={idx}
+                            onClick={() => generateCard(phrase)}
+                            className="bg-white px-3 py-1.5 rounded-lg border border-gray-100 text-sm text-gray-600 hover:border-green-400 hover:text-green-700 hover:bg-green-50 transition-colors text-left"
+                        >
+                            {phrase}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Input Area */}
+                <div className="bg-white p-1 rounded-2xl shadow-sm border border-gray-200 focus-within:ring-2 focus-within:ring-green-500/20 focus-within:border-green-500 transition-all">
                     <textarea
-                        className="w-full p-4 bg-gray-50 rounded-2xl border-transparent focus:bg-white focus:ring-2 focus:ring-green-500 outline-none resize-none text-lg transition-all"
-                        rows={3}
-                        placeholder="e.g. I am allergic to peanuts..."
+                        className="w-full p-4 bg-transparent outline-none resize-none text-lg text-gray-800 placeholder:text-gray-300 min-h-[100px]"
+                        placeholder="Or type anything here..."
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
                     />
-
-                    {/* Quick Phrases */}
-                    <div className="mt-4 flex flex-wrap gap-2">
-                        {QUICK_PHRASES.map((phrase) => (
-                            <button
-                                key={phrase}
-                                onClick={() => setInputText(phrase)}
-                                className="px-3 py-1.5 bg-gray-100 hover:bg-green-50 hover:text-green-700 text-xs text-gray-600 rounded-full transition-colors font-medium border border-transparent hover:border-green-200"
-                            >
-                                {phrase}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="mt-6 flex flex-col sm:flex-row items-center gap-4">
-                        <div className="w-full sm:flex-1">
-                            <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wide">Translate to</label>
-                            <div className="relative">
-                                <select
-                                    className="w-full p-3 bg-gray-50 hover:bg-gray-100 rounded-xl font-semibold outline-none appearance-none cursor-pointer transition-colors"
-                                    value={targetLang}
-                                    onChange={(e) => setTargetLang(e.target.value)}
-                                >
-                                    {LANGUAGES.map(lang => <option key={lang.name} value={lang.name}>{lang.name}</option>)}
-                                </select>
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">▼</div>
-                            </div>
-                        </div>
-                        <button
-                            onClick={generateCard}
-                            disabled={loading || !inputText}
-                            className="w-full sm:w-auto h-12 px-8 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-green-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+                    <div className="px-4 pb-4 flex flex-col sm:flex-row items-center gap-3">
+                        <select
+                            className="w-full sm:w-auto p-2.5 bg-gray-50 rounded-xl font-medium text-gray-700 outline-none border border-gray-200 focus:border-green-500"
+                            value={targetLang}
+                            onChange={(e) => setTargetLang(e.target.value)}
                         >
-                            {loading ? <Loader2 className="animate-spin w-5 h-5" /> : (
-                                <>
-                                    <span>Translate</span>
-                                    <Globe className="w-4 h-4" />
-                                </>
-                            )}
+                            {LANGUAGES.map(lang => <option key={lang} value={lang}>{lang}</option>)}
+                        </select>
+
+                        <button
+                            onClick={() => generateCard()}
+                            disabled={loading || !inputText}
+                            className="w-full sm:flex-1 h-11 bg-gray-900 text-white rounded-xl font-semibold hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                        >
+                            {loading ? <Loader2 className="animate-spin w-4 h-4" /> : 'Translate'}
                         </button>
                     </div>
                 </div>
 
                 {error && (
-                    <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl text-sm flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+                    <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl text-sm flex items-center gap-2 animate-in slide-in-from-top-2">
                         <AlertTriangle className="w-4 h-4" />
                         {error}
                     </div>
                 )}
 
-                {/* Active Card Dispay */}
-                <AnimatePresence mode="wait">
-                    {cardData && (
-                        <motion.div
-                            key={cardData.translated + cardData.timestamp}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            className="bg-white rounded-[2rem] shadow-2xl shadow-green-900/10 border border-green-100 overflow-hidden relative group"
-                        >
-                            {/* Card Header */}
-                            <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4 text-white flex justify-between items-center">
-                                <span className="font-bold flex items-center gap-2 text-sm bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm">
-                                    <Globe className="w-3 h-3" />
-                                    {cardData.language}
-                                </span>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => setShowFullscreen(true)}
-                                        className="p-2 hover:bg-white/20 rounded-full transition-colors"
-                                        title="Fullscreen"
-                                    >
-                                        <Maximize2 className="w-5 h-5" />
-                                    </button>
-                                    <button
-                                        onClick={() => speak(cardData.translated, cardData.langCode)}
-                                        className="p-2 bg-white text-green-700 rounded-full hover:scale-105 transition-transform shadow-lg"
-                                        title="Speak Aloud"
-                                    >
-                                        <Volume2 className="w-5 h-5" />
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Card Body */}
-                            <div className="p-8 text-center flex flex-col items-center justify-center min-h-[220px]">
-                                <p className="text-3xl md:text-5xl font-black text-gray-900 leading-tight mb-6 select-all">
-                                    {cardData.translated}
-                                </p>
-                                <div className="h-px w-24 bg-gray-100 my-4" />
-                                <p className="text-gray-400 font-medium text-lg">
-                                    "{cardData.original}"
-                                </p>
-                            </div>
-
-                            {/* Footer hint */}
-                            <div className="bg-gray-50/50 px-6 py-3 text-center border-t border-gray-100">
-                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Show this to a medical professional</p>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {/* Saved Cards Section */}
-                {savedCards.length > 0 && (
-                    <div className="mt-8">
-                        <h3 className="text-lg font-bold text-gray-800 mb-4 px-2 flex items-center gap-2">
-                            <Save className="w-5 h-5 text-gray-400" />
-                            Saved Cards
-                        </h3>
-                        <div className="grid gap-3">
-                            <AnimatePresence>
-                                {savedCards.map((card, index) => (
-                                    <motion.div
-                                        key={index}
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, height: 0 }}
-                                        onClick={() => setCardData(card)}
-                                        className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-green-200 transition-all cursor-pointer flex justify-between items-center group"
-                                    >
-                                        <div className="overflow-hidden">
-                                            <p className="font-bold text-gray-800 truncate">{card.original}</p>
-                                            <p className="text-xs text-green-600 font-medium">{card.language} • {card.translated.substring(0, 30)}...</p>
+                {/* Card Result area - Placeholder or Result */}
+                <div className="flex-grow flex flex-col justify-start">
+                    <AnimatePresence mode="wait">
+                        {cardData ? (
+                            <motion.div
+                                key="result"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                className="bg-white rounded-[2rem] shadow-xl shadow-gray-200/50 overflow-hidden border border-gray-100 relative group"
+                            >
+                                {/* Top colored bar */}
+                                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white flex justify-between items-start">
+                                    <div>
+                                        <div className="flex items-center gap-2 opacity-80 text-sm font-medium mb-1">
+                                            <Globe className="w-4 h-4" />
+                                            {cardData.language} Translation
                                         </div>
-                                        <button
-                                            onClick={(e) => deleteCard(index, e)}
-                                            className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
+                                        <h2 className="text-2xl font-bold">Medical Card</h2>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => speak(cardData.translated)} className="p-2 bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-sm transition-colors">
+                                            <Volume2 className="w-5 h-5" />
                                         </button>
-                                    </motion.div>
-                                ))}
-                            </AnimatePresence>
-                        </div>
-                    </div>
-                )}
+                                        <button onClick={() => setShowFullScreen(true)} className="p-2 bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-sm transition-colors">
+                                            <Maximize2 className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="p-8 text-center flex flex-col gap-6">
+
+                                    <div className="space-y-2">
+                                        <p className="text-4xl md:text-5xl font-black text-gray-900 leading-tight">
+                                            {cardData.translated}
+                                        </p>
+                                        {cardData.phonetic && (
+                                            <p className="text-lg text-indigo-600 font-medium font-serif italic">
+                                                / {cardData.phonetic} /
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent w-full" />
+
+                                    <div className="space-y-1">
+                                        <p className="text-xs uppercase tracking-widest text-gray-400 font-bold">Original</p>
+                                        <p className="text-xl text-gray-600 font-medium">
+                                            "{cardData.original}"
+                                        </p>
+                                    </div>
+
+                                    <div className="mt-4 bg-blue-50 text-blue-800 text-xs font-bold py-2 px-4 rounded-full self-center">
+                                        Show this screen to medical personnel
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ) : (
+                            !loading && (
+                                <div className="text-center py-20 opacity-40">
+                                    <div className="w-20 h-20 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
+                                        <Globe className="w-8 h-8 text-gray-400" />
+                                    </div>
+                                    <p className="text-gray-500 font-medium">Select a phrase or type below to create a travel card.</p>
+                                </div>
+                            )
+                        )}
+                    </AnimatePresence>
+                </div>
+
             </main>
 
             {/* Fullscreen Overlay */}
             <AnimatePresence>
-                {showFullscreen && cardData && (
+                {showFullScreen && cardData && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 bg-white flex flex-col"
+                        className="fixed inset-0 bg-white z-50 flex flex-col p-6 items-center justify-center text-center"
                     >
-                        <div className="p-4 flex justify-end">
-                            <button onClick={() => setShowFullscreen(false)} className="p-4 bg-gray-100 rounded-full">
-                                <X className="w-8 h-8 text-gray-800" />
-                            </button>
-                        </div>
-                        <div className="flex-grow flex flex-col items-center justify-center p-8 text-center -mt-20">
-                            <p className="text-6xl md:text-8xl font-black text-gray-900 leading-tight mb-12">
+                        <button
+                            onClick={() => setShowFullScreen(false)}
+                            className="absolute top-6 right-6 p-4 bg-gray-100 rounded-full hover:bg-gray-200"
+                        >
+                            <X className="w-8 h-8 text-gray-600" />
+                        </button>
+
+                        <div className="space-y-8 max-w-4xl">
+                            <h3 className="text-gray-500 font-medium text-xl uppercase tracking-widest">
+                                I am trying to say:
+                            </h3>
+                            <p className="text-5xl md:text-7xl font-black text-gray-900 leading-tight">
                                 {cardData.translated}
                             </p>
-                            <button
-                                onClick={() => speak(cardData.translated, cardData.langCode)}
-                                className="px-8 py-4 bg-green-600 text-white rounded-full font-bold text-xl flex items-center gap-3 shadow-xl hover:scale-105 transition-transform"
-                            >
-                                <Volume2 className="w-8 h-8" />
-                                Play Audio
-                            </button>
+                            {cardData.phonetic && (
+                                <p className="text-3xl text-indigo-600 font-serif italic">
+                                    / {cardData.phonetic} /
+                                </p>
+                            )}
+                            <div className="pt-12">
+                                <p className="text-2xl text-gray-500">"{cardData.original}"</p>
+                            </div>
                         </div>
                     </motion.div>
                 )}

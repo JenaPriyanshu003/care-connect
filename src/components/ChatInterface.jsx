@@ -9,9 +9,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 const ChatInterface = () => {
     const navigate = useNavigate();
     const { messages, sendMessage, isLoading, error } = useAI();
-    const { isListening, transcript, setTranscript, startListening, isSpeaking, speak, supported } = useSpeech();
+    const { isListening, transcript, setTranscript, startListening, isSpeaking, speak, supported, voices } = useSpeech();
     const [inputValue, setInputValue] = useState('');
-    const [isVoiceMode, setIsVoiceMode] = useState(false);
+    const [isVoiceMode, setIsVoiceMode] = useState(false); // keep existing state
+    const [showSettings, setShowSettings] = useState(false);
+    const [selectedVoice, setSelectedVoice] = useState(null);
+    const [pitch, setPitch] = useState(1.3); // Default High Pitch
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
@@ -36,15 +39,13 @@ const ChatInterface = () => {
         setTranscript('');
     };
 
-    // Auto-send in voice mode if silence? (Optional, kept simple for now)
-
     // Auto-save key
 
 
     return (
         <div className="flex flex-col h-screen bg-gray-50">
             {/* Header */}
-            <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm z-10">
+            <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm z-10 relative">
                 <button onClick={() => navigate('/')} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                     <ArrowLeft className="w-5 h-5 text-gray-600" />
                 </button>
@@ -55,7 +56,68 @@ const ChatInterface = () => {
                     </span>
                     <span className="text-xs text-green-600 font-medium">Online</span>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 relative">
+                    <button
+                        onClick={() => setShowSettings(!showSettings)}
+                        className={`p-2 rounded-full text-gray-600 transition-colors ${showSettings ? 'bg-gray-100 text-green-600' : 'hover:bg-gray-100'}`}
+                        title="Voice Settings"
+                    >
+                        <Settings className="w-5 h-5" />
+                    </button>
+
+                    {/* Voice Settings Dropdown */}
+                    {showSettings && (
+                        <div className="absolute top-12 right-0 bg-white border border-gray-100 rounded-xl shadow-xl w-72 p-4 z-50 animate-in fade-in slide-in-from-top-2">
+
+                            {/* Pitch Control */}
+                            <div className="mb-4">
+                                <div className="flex justify-between items-center mb-1">
+                                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pitch</h3>
+                                    <span className="text-xs text-green-600 font-medium">{pitch.toFixed(1)}</span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0.5"
+                                    max="2.0"
+                                    step="0.1"
+                                    value={pitch}
+                                    onChange={(e) => setPitch(parseFloat(e.target.value))}
+                                    className="w-full accent-green-600 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                />
+                                <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+                                    <span>Deep</span>
+                                    <span>High</span>
+                                </div>
+                            </div>
+
+                            <div className="w-full border-t border-gray-100 my-2"></div>
+
+                            {/* Voice Selection */}
+                            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Select Voice</h3>
+                            <div className="max-h-48 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                                {voices.map((voice, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => {
+                                            setSelectedVoice(voice.name);
+                                            // Test speech short snippet
+                                            speak("Voice changed.", voice.name, pitch);
+                                        }}
+                                        className={`w-full text-left px-3 py-2 rounded-lg text-sm truncate transition-colors ${selectedVoice === voice.name
+                                            ? 'bg-green-50 text-green-700 font-medium'
+                                            : 'hover:bg-gray-50 text-gray-700'
+                                            }`}
+                                    >
+                                        {voice.name.replace(/Google|Microsoft/g, '').trim()}
+                                    </button>
+                                ))}
+                                {voices.length === 0 && (
+                                    <p className="text-sm text-gray-400 italic p-2">No voices found...</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     <button
                         onClick={() => generatePDFReport(messages)}
                         className="p-2 hover:bg-gray-100 rounded-full text-gray-600"
@@ -91,7 +153,7 @@ const ChatInterface = () => {
                             <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
                             {msg.role === 'assistant' && (
                                 <button
-                                    onClick={() => speak(msg.text)}
+                                    onClick={() => speak(msg.text, selectedVoice, pitch)}
                                     className="mt-2 p-1 hover:bg-gray-100 rounded-full text-gray-400 hover:text-green-600 transition-colors"
                                 >
                                     <Volume2 className="w-4 h-4" />
