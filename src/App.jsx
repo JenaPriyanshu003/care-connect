@@ -7,6 +7,7 @@ import VisionUpload from './components/VisionUpload';
 import EmergencyFinder from './components/EmergencyFinder';
 import TravelCards from './components/TravelCards';
 import MedicationTracker from './components/MedicationTracker';
+import HowItWorks from './components/HowItWorks';
 
 function App() {
     return (
@@ -14,6 +15,7 @@ function App() {
             <div className="min-h-screen bg-white text-gray-900 font-sans">
                 <Routes>
                     <Route path="/" element={<LandingPage />} />
+                    <Route path="/how-it-works" element={<HowItWorks />} />
                     <Route path="/chat" element={<ChatInterface />} />
                     <Route path="/vision" element={<VisionUpload />} />
                     <Route path="/emergency" element={<EmergencyFinder />} />

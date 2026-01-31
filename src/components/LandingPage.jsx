@@ -18,15 +18,9 @@ const LandingPage = () => {
                     </div>
                     <nav className="hidden md:flex items-center gap-8">
                         <a href="#features" className="text-sm font-medium text-gray-600 hover:text-primary transition-colors">Features</a>
-                        <a href="#how-it-works" className="text-sm font-medium text-gray-600 hover:text-primary transition-colors">How it works</a>
+                        <button onClick={() => navigate('/how-it-works')} className="text-sm font-medium text-gray-600 hover:text-primary transition-colors">How it works</button>
                     </nav>
-                    <button
-                        onClick={() => navigate('/chat')}
-                        className="bg-primary hover:bg-green-700 text-white px-5 py-2.5 rounded-full font-semibold text-sm transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
-                    >
-                        Try now
-                        <ArrowRight className="w-4 h-4" />
-                    </button>
+
                 </div>
             </header>
 
@@ -58,7 +52,10 @@ const LandingPage = () => {
                                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                 </span>
                             </button>
-                            <button className="w-full sm:w-auto px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 border border-gray-200 hover:border-gray-300 rounded-full font-semibold text-lg transition-all">
+                            <button
+                                onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+                                className="w-full sm:w-auto px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 border border-gray-200 hover:border-gray-300 rounded-full font-semibold text-lg transition-all"
+                            >
                                 Learn More
                             </button>
                         </div>
@@ -95,8 +92,9 @@ const LandingPage = () => {
                     </div>
                 </section>
 
-                {/* Advanced Features Teaser */}
-                <section className="py-24 bg-white">
+
+
+                {/* Advanced Features Teaser */}<section className="py-24 bg-white">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                         <h2 className="text-3xl font-bold mb-12">All-in-One Travel Health Super-App</h2>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -146,5 +144,15 @@ const SmallFeatureCard = ({ icon, title, link }) => {
         </div>
     )
 }
+
+const StepCard = ({ number, title, description }) => (
+    <div className="relative bg-white p-6 rounded-2xl border border-gray-100 shadow-lg shadow-green-100/50 text-center group hover:-translate-y-2 transition-transform duration-300">
+        <div className="w-16 h-16 mx-auto bg-green-600 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mb-6 shadow-lg shadow-green-600/30 group-hover:scale-110 transition-transform">
+            {number}
+        </div>
+        <h3 className="text-xl font-bold text-gray-900 mb-3">{title}</h3>
+        <p className="text-gray-600 leading-relaxed">{description}</p>
+    </div>
+);
 
 export default LandingPage;

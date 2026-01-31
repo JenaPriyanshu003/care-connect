@@ -17,9 +17,9 @@ const TravelCards = () => {
     const generateCard = async () => {
         if (!inputText.trim()) return;
 
-        const apiKey = localStorage.getItem('gemini_api_key');
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
         if (!apiKey) {
-            setError('Please save your API Key in the Chat Settings first.');
+            setError('API Key missing. Please check your .env file.');
             return;
         }
 
@@ -43,7 +43,7 @@ const TravelCards = () => {
             });
         } catch (err) {
             console.error(err);
-            setError('Translation failed. Please check your API key or internet connection.');
+            setError(`Translation failed: ${err.message || 'Check API key/connection'}`);
         } finally {
             setLoading(false);
         }

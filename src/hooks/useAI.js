@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Initialize Gemini
 // NOTE: For a real production app, this should be in a backend to hide the key.
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyBX0zOG_JGmS7nsmbLqBk4LqYbNaqsWiDo";
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 export const useAI = () => {
     const [messages, setMessages] = useState([
